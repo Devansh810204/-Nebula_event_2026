@@ -3,7 +3,7 @@ import { useEvent } from "../context/EventContext";
 import { Trophy, Terminal, ShieldAlert, LogOut, ShieldCheck } from "lucide-react";
 
 export default function Navbar() {
-  const { currentUser, currentTeam, activeTab, setActiveTab, logout } = useEvent();
+  const { currentUser, currentTeam, activeTab, setActiveTab, logout, isBackendConnected } = useEvent();
 
   return (
     <header className="navbar">
@@ -52,6 +52,23 @@ export default function Navbar() {
 
         {/* User Info & Logout */}
         <div className="user-section">
+          {/* Live Server Sync Status */}
+          {isBackendConnected === true && (
+            <div className="server-status-pill online" title="Central backend connected: All laptops are synchronized">
+              <span className="status-dot green"></span>
+              <span>Server Synced</span>
+            </div>
+          )}
+          {isBackendConnected === false && (
+            <div
+              className="server-status-pill offline"
+              title="Backend not detected! Running in local-only mode. To sync across laptops, deploy as a Web Service on Render."
+            >
+              <span className="status-dot red"></span>
+              <span>Local Mode (No Server)</span>
+            </div>
+          )}
+
           {currentUser?.type === "TEAM" && currentTeam && (
             <div className="team-pill">
               <span className="team-pill-name">{currentTeam.name}</span>

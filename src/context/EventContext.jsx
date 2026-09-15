@@ -38,29 +38,39 @@ export function EventProvider({ children }) {
     }
   }, [currentUser]);
 
-  // Central Server Synchronization: Poll /api/teams every 5 seconds
+  const [isBackendConnected, setIsBackendConnected] = useState(null); // null = checking, true = connected, false = disconnected
+
+  // Central Server Synchronization: Poll /api/teams every 4 seconds
   const fetchLatestTeamsFromServer = useCallback(async () => {
     try {
-      const res = await fetch("/api/teams");
-      if (res.ok) {
+      const res = await fetch("/api/teams", {
+        headers: { Accept: "application/json" },
+      });
+      const contentType = res.headers.get("content-type") || "";
+
+      // Ensure response is actually JSON and not an HTML fallback page from a Static Site
+      if (res.ok && contentType.includes("application/json")) {
         const data = await res.json();
-        if (data.teams && Array.isArray(data.teams)) {
+        if (data.success && Array.isArray(data.teams)) {
           setTeams(data.teams);
+          setIsBackendConnected(true);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data.teams));
           if (data.eventDuration) {
             setEventDuration(data.eventDuration);
           }
+          return;
         }
       }
+      setIsBackendConnected(false);
     } catch (err) {
-      // Backend not running or offline, keep local state
+      setIsBackendConnected(false);
     }
   }, []);
 
-  // Poll on mount and every 5 seconds
+  // Poll on mount and every 4 seconds
   useEffect(() => {
     fetchLatestTeamsFromServer();
-    const interval = setInterval(fetchLatestTeamsFromServer, 5000);
+    const interval = setInterval(fetchLatestTeamsFromServer, 4000);
     return () => clearInterval(interval);
   }, [fetchLatestTeamsFromServer]);
 
@@ -303,6 +313,7 @@ export function EventProvider({ children }) {
         currentTeam,
         activeTab,
         eventDuration,
+        isBackendConnected,
         setActiveTab,
         login,
         logout,
