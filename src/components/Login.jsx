@@ -32,13 +32,6 @@ export default function Login() {
     }
   };
 
-  const handleQuickFill = (id, pass) => {
-    setTeamId(id);
-    setPasscode(pass);
-    setError("");
-    setIsDisqualifiedError(false);
-  };
-
   return (
     <div className="login-wrapper">
       <div className="login-card">
@@ -94,40 +87,6 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Quick Demo Credentials for Organizer/Testing */}
-        <div className="quick-fill-section">
-          <div className="quick-fill-label">Demo & Testing Shortcuts:</div>
-          <div className="quick-fill-chips">
-            <button
-              type="button"
-              className="chip-btn"
-              onClick={() => handleQuickFill("TEAM01", "team01")}
-            >
-              Team 01
-            </button>
-            <button
-              type="button"
-              className="chip-btn"
-              onClick={() => handleQuickFill("TEAM02", "team02")}
-            >
-              Team 02
-            </button>
-            <button
-              type="button"
-              className="chip-btn"
-              onClick={() => handleQuickFill("TEAM03", "team03")}
-            >
-              Team 03
-            </button>
-            <button
-              type="button"
-              className="chip-btn admin-chip"
-              onClick={() => handleQuickFill("ADMIN", "admin2026")}
-            >
-              Tech Head (Admin)
-            </button>
-          </div>
-        </div>
 
         <div className="security-notice-footer">
           <ShieldAlert size={14} />
