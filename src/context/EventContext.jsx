@@ -65,9 +65,14 @@ export function EventProvider({ children }) {
   const fetchLatestTeamsFromServer = useCallback(async () => {
     // 1. Try local Express backend
     try {
+      const headers = { Accept: "application/json", "Cache-Control": "no-cache" };
+      if (currentUser?.type === "ADMIN") {
+        headers["x-admin-key"] = "Admin_Nebula_2026";
+      }
+
       const res = await fetch(`/api/teams?_t=${Date.now()}`, {
         cache: "no-store",
-        headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+        headers,
       });
       const contentType = res.headers.get("content-type") || "";
 
@@ -153,7 +158,7 @@ export function EventProvider({ children }) {
     } catch (e) {}
 
     // Cloud / Local Login
-    if (cleanId === "ADMIN" && (cleanPass === "admin2026" || cleanPass === "admin123" || cleanPass === "admin")) {
+    if (cleanId === "ADMIN" && cleanPass === "Admin_Nebula_2026") {
       const user = { type: "ADMIN", name: "Technical Head (Admin)" };
       setCurrentUser(user);
       setActiveTab("admin");

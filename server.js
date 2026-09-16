@@ -49,8 +49,51 @@ loadData();
 
 // API ROUTES
 
-// 1. Get Live Teams & Leaderboard State
+const ADMIN_SECRET_KEY = "Admin_Nebula_2026";
+
+// 1. Get Live Teams & Leaderboard State (Sanitized for public/participants)
 app.get("/api/teams", (req, res) => {
+  const isAdmin = req.headers["x-admin-key"] === ADMIN_SECRET_KEY;
+  
+  if (isAdmin) {
+    // Admin gets full data with passwords
+    return res.json({
+      success: true,
+      teams,
+      eventDuration,
+      serverTime: Date.now(),
+    });
+  }
+
+  // Participants & Public Leaderboard: STRIP password and passcode!
+  // No one can see the answers in F12 / Network tab!
+  const publicTeams = teams.map((t) => ({
+    id: t.id,
+    name: t.name,
+    letters: t.letters,
+    hint: t.hint,
+    chancesLeft: t.chancesLeft,
+    chancesUsed: t.chancesUsed,
+    solved: t.solved,
+    timeTaken: t.timeTaken,
+    startTime: t.startTime,
+    status: t.status,
+    disqualifiedReason: t.disqualifiedReason,
+  }));
+
+  res.json({
+    success: true,
+    teams: publicTeams,
+    eventDuration,
+    serverTime: Date.now(),
+  });
+});
+
+// Admin-only teams endpoint with passwords
+app.get("/api/admin/teams", (req, res) => {
+  if (req.headers["x-admin-key"] !== ADMIN_SECRET_KEY) {
+    return res.status(403).json({ success: false, error: "Unauthorized" });
+  }
   res.json({
     success: true,
     teams,
@@ -70,11 +113,12 @@ app.post("/api/login", (req, res) => {
   const cleanPass = passcode.trim();
 
   // Admin Login Check
-  if (cleanId === "ADMIN" && (cleanPass === "admin2026" || cleanPass === "admin123" || cleanPass === "admin")) {
+  if (cleanId === "ADMIN" && cleanPass === ADMIN_SECRET_KEY) {
     return res.json({
       success: true,
       role: "ADMIN",
       user: { type: "ADMIN", name: "Technical Head (Admin)" },
+      adminKey: ADMIN_SECRET_KEY,
     });
   }
 
@@ -100,11 +144,15 @@ app.post("/api/login", (req, res) => {
     return res.status(401).json({ success: false, error: "Incorrect passcode for this team." });
   }
 
+  const safeTeam = { ...team };
+  delete safeTeam.password; // Do not send target password to participant browser
+  delete safeTeam.passcode;
+
   return res.json({
     success: true,
     role: "TEAM",
     user: { type: "TEAM", teamId: team.id, name: team.name },
-    team,
+    team: safeTeam,
   });
 });
 
