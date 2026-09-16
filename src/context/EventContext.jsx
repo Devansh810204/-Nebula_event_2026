@@ -65,8 +65,9 @@ export function EventProvider({ children }) {
   const fetchLatestTeamsFromServer = useCallback(async () => {
     // 1. Try local Express backend
     try {
-      const res = await fetch("/api/teams", {
-        headers: { Accept: "application/json" },
+      const res = await fetch(`/api/teams?_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { Accept: "application/json", "Cache-Control": "no-cache" },
       });
       const contentType = res.headers.get("content-type") || "";
 
@@ -88,7 +89,10 @@ export function EventProvider({ children }) {
 
     // 2. Dual-Sync Fallback: Global Cloud Realtime KV Store
     try {
-      const cloudRes = await fetch(CLOUD_SYNC_URL);
+      const cloudRes = await fetch(`${CLOUD_SYNC_URL}?_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+      });
       if (cloudRes.ok) {
         const cloudData = await cloudRes.json();
         if (cloudData.teams && Array.isArray(cloudData.teams)) {
