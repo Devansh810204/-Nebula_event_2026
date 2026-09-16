@@ -53,7 +53,7 @@ export default function AdminPanel() {
     setEditHint(team.hint);
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!editingTeam) return;
 
@@ -62,7 +62,7 @@ export default function AdminPanel() {
       return;
     }
 
-    updateTeamQuestion(editingTeam.id, {
+    await updateTeamQuestion(editingTeam.id, {
       hint: editHint,
       password: editPassword,
       letters: editLetters,
@@ -72,7 +72,7 @@ export default function AdminPanel() {
   };
 
   // Add New Team Handler
-  const handleAddNewTeam = (e) => {
+  const handleAddNewTeam = async (e) => {
     e.preventDefault();
     setFormMsg("");
 
@@ -86,7 +86,7 @@ export default function AdminPanel() {
       return;
     }
 
-    const res = addNewTeam({
+    const res = await addNewTeam({
       id: newTeamId,
       name: newTeamName || `Team ${newTeamId}`,
       passcode: newPasscode || "pass123",
@@ -95,7 +95,7 @@ export default function AdminPanel() {
       hint: newHint,
     });
 
-    if (res.success) {
+    if (res && res.success) {
       setFormMsg("Team and Question added successfully!");
       setNewTeamId("");
       setNewTeamName("");
@@ -105,7 +105,7 @@ export default function AdminPanel() {
       setNewHint("");
       setTimeout(() => setFormMsg(""), 3500);
     } else {
-      setFormMsg(res.message || "Failed to add team.");
+      setFormMsg(res?.message || "Failed to add team.");
     }
   };
 

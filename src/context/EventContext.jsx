@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { INITIAL_TEAMS } from "../data/defaultTeams";
 
 const STORAGE_KEY = "nebula_2026_event_teams";
 const CURRENT_USER_KEY = "nebula_2026_current_user";
+const CLOUD_SYNC_URL = "https://kvdb.io/FMATtTgS58UHyrfr2r84pR/nebula_2026_state";
 
 const EventContext = createContext();
 
@@ -17,7 +18,6 @@ export function EventProvider({ children }) {
   });
 
   const [eventDuration, setEventDuration] = useState(300);
-
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem(CURRENT_USER_KEY);
@@ -28,6 +28,12 @@ export function EventProvider({ children }) {
   });
 
   const [activeTab, setActiveTab] = useState("output");
+  const [isBackendConnected, setIsBackendConnected] = useState(true);
+
+  const teamsRef = useRef(teams);
+  useEffect(() => {
+    teamsRef.current = teams;
+  }, [teams]);
 
   // Save current user to localStorage
   useEffect(() => {
@@ -38,17 +44,32 @@ export function EventProvider({ children }) {
     }
   }, [currentUser]);
 
-  const [isBackendConnected, setIsBackendConnected] = useState(null); // null = checking, true = connected, false = disconnected
+  // Publish updated state to cloud store & server
+  const pushStateToCloud = async (updatedTeams, duration = eventDuration) => {
+    try {
+      await fetch(CLOUD_SYNC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teams: updatedTeams,
+          eventDuration: duration,
+          updatedAt: Date.now(),
+        }),
+      });
+    } catch (err) {
+      console.warn("Cloud sync push error:", err);
+    }
+  };
 
-  // Central Server Synchronization: Poll /api/teams every 4 seconds
+  // Sync teams across all laptops: Checks Express server first, then Cloud Store
   const fetchLatestTeamsFromServer = useCallback(async () => {
+    // 1. Try local Express backend
     try {
       const res = await fetch("/api/teams", {
         headers: { Accept: "application/json" },
       });
       const contentType = res.headers.get("content-type") || "";
 
-      // Ensure response is actually JSON and not an HTML fallback page from a Static Site
       if (res.ok && contentType.includes("application/json")) {
         const data = await res.json();
         if (data.success && Array.isArray(data.teams)) {
@@ -61,76 +82,101 @@ export function EventProvider({ children }) {
           return;
         }
       }
-      setIsBackendConnected(false);
+    } catch (e) {
+      // Express not available (e.g. running on Render Static Site)
+    }
+
+    // 2. Dual-Sync Fallback: Global Cloud Realtime KV Store
+    try {
+      const cloudRes = await fetch(CLOUD_SYNC_URL);
+      if (cloudRes.ok) {
+        const cloudData = await cloudRes.json();
+        if (cloudData.teams && Array.isArray(cloudData.teams)) {
+          setTeams(cloudData.teams);
+          setIsBackendConnected(true);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData.teams));
+          if (cloudData.eventDuration) {
+            setEventDuration(cloudData.eventDuration);
+          }
+          return;
+        }
+      }
     } catch (err) {
-      setIsBackendConnected(false);
+      console.warn("Cloud sync read error:", err);
     }
   }, []);
 
-  // Poll on mount and every 4 seconds
+  // Continuous auto-sync every 3.5 seconds across all machines
   useEffect(() => {
     fetchLatestTeamsFromServer();
-    const interval = setInterval(fetchLatestTeamsFromServer, 4000);
+    const interval = setInterval(fetchLatestTeamsFromServer, 3500);
     return () => clearInterval(interval);
   }, [fetchLatestTeamsFromServer]);
 
-  // Get current logged-in team details
+  // Current logged in team
   const currentTeam = currentUser?.type === "TEAM"
     ? teams.find((t) => t.id === currentUser.teamId)
     : null;
 
   // 1. Login
   const login = async (teamId, passcode) => {
+    const cleanId = teamId.trim().toUpperCase();
+    const cleanPass = passcode.trim();
+
+    // Try server login
     try {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ teamId, passcode }),
       });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        return {
-          success: false,
-          isDisqualified: data.isDisqualified || false,
-          error: data.error || "Login failed.",
-        };
+      const contentType = res.headers.get("content-type") || "";
+      if (res.ok && contentType.includes("application/json")) {
+        const data = await res.json();
+        if (data.success) {
+          setCurrentUser(data.user);
+          setActiveTab(data.role === "ADMIN" ? "admin" : "output");
+          fetchLatestTeamsFromServer();
+          return { success: true, role: data.role };
+        } else {
+          return {
+            success: false,
+            isDisqualified: data.isDisqualified || false,
+            error: data.error || "Login failed.",
+          };
+        }
       }
+    } catch (e) {}
 
-      setCurrentUser(data.user);
-      setActiveTab(data.role === "ADMIN" ? "admin" : "output");
-      fetchLatestTeamsFromServer();
-      return { success: true, role: data.role };
-    } catch (err) {
-      // Fallback local check
-      const cleanId = teamId.trim().toUpperCase();
-      const cleanPass = passcode.trim();
-
-      if (cleanId === "ADMIN" && (cleanPass === "admin2026" || cleanPass === "admin123" || cleanPass === "admin")) {
-        const user = { type: "ADMIN", name: "Technical Head (Admin)" };
-        setCurrentUser(user);
-        setActiveTab("admin");
-        return { success: true, role: "ADMIN" };
-      }
-
-      const team = teams.find((t) => t.id.toUpperCase() === cleanId);
-      if (!team) return { success: false, error: "Team ID not found." };
-      if (team.status === "DISQUALIFIED" || team.disqualifiedReason) {
-        return {
-          success: false,
-          isDisqualified: true,
-          error: `Access Denied: Account marked as "${team.disqualifiedReason || "Disabled for changing tab"}"`,
-        };
-      }
-      if (team.passcode !== cleanPass) {
-        return { success: false, error: "Incorrect passcode." };
-      }
-
-      const user = { type: "TEAM", teamId: team.id, name: team.name };
+    // Cloud / Local Login
+    if (cleanId === "ADMIN" && (cleanPass === "admin2026" || cleanPass === "admin123" || cleanPass === "admin")) {
+      const user = { type: "ADMIN", name: "Technical Head (Admin)" };
       setCurrentUser(user);
-      setActiveTab("output");
-      return { success: true, role: "TEAM" };
+      setActiveTab("admin");
+      return { success: true, role: "ADMIN" };
     }
+
+    const team = teamsRef.current.find((t) => t.id.toUpperCase() === cleanId);
+    if (!team) {
+      return { success: false, error: "Team ID not found. Please check credentials." };
+    }
+
+    if (team.status === "DISQUALIFIED" || team.disqualifiedReason) {
+      return {
+        success: false,
+        isDisqualified: true,
+        error: `Access Denied: Account marked as "${team.disqualifiedReason || "Disabled for changing tab"}". You cannot login again.`,
+      };
+    }
+
+    if (team.passcode !== cleanPass) {
+      return { success: false, error: "Incorrect passcode for this team." };
+    }
+
+    const user = { type: "TEAM", teamId: team.id, name: team.name };
+    setCurrentUser(user);
+    setActiveTab("output");
+    return { success: true, role: "TEAM" };
   };
 
   // 2. Logout
@@ -139,25 +185,26 @@ export function EventProvider({ children }) {
     setActiveTab("output");
   };
 
-  // 3. Disqualify (Tab Switch, Fullscreen Exit)
+  // 3. Disqualify
   const disqualifyTeam = async (teamId, reason = "Disabled for changing tab") => {
-    try {
-      await fetch("/api/disqualify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamId, reason }),
-      });
-    } catch (e) {}
-
-    // Update local state immediately
-    const updated = teams.map((t) => {
+    const updated = teamsRef.current.map((t) => {
       if (t.id === teamId) {
         return { ...t, status: "DISQUALIFIED", disqualifiedReason: reason };
       }
       return t;
     });
+
     setTeams(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    pushStateToCloud(updated);
+
+    try {
+      fetch("/api/disqualify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, reason }),
+      });
+    } catch (e) {}
 
     if (currentUser?.type === "TEAM" && currentUser.teamId === teamId) {
       setCurrentUser(null);
@@ -166,131 +213,242 @@ export function EventProvider({ children }) {
 
   // 4. Start Timer
   const startTeamTimer = async (teamId) => {
-    try {
-      const res = await fetch("/api/start-timer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamId }),
-      });
-      if (res.ok) {
-        fetchLatestTeamsFromServer();
-      }
-    } catch (e) {
-      const updated = teams.map((t) => {
-        if (t.id === teamId && !t.startTime) {
-          return { ...t, startTime: Date.now(), status: "IN_PROGRESS" };
+    const team = teamsRef.current.find((t) => t.id === teamId);
+    if (team && !team.startTime && !team.solved && team.status !== "DISQUALIFIED") {
+      const now = Date.now();
+      const updated = teamsRef.current.map((t) => {
+        if (t.id === teamId) {
+          return { ...t, startTime: now, status: "IN_PROGRESS" };
         }
         return t;
       });
       setTeams(updated);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      pushStateToCloud(updated);
+
+      try {
+        fetch("/api/start-timer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ teamId }),
+        });
+      } catch (e) {}
     }
   };
 
   // 5. Submit Guess
   const submitGuess = async (teamId, rawGuess) => {
-    try {
-      const res = await fetch("/api/submit-guess", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamId, guess: rawGuess }),
-      });
+    const currentTeams = teamsRef.current;
+    const team = currentTeams.find((t) => t.id === teamId);
+    if (!team) return { success: false, correct: false, chancesLeft: 0 };
 
-      const data = await res.json();
-      if (res.ok && data.success) {
-        fetchLatestTeamsFromServer();
-        return {
-          correct: data.correct,
-          timeTaken: data.timeTaken,
-          chancesLeft: data.chancesLeft,
-        };
-      }
-    } catch (e) {}
+    if (team.status === "DISQUALIFIED") {
+      return { success: false, correct: false, chancesLeft: team.chancesLeft };
+    }
+    if (team.chancesLeft <= 0 || team.solved) {
+      return { success: false, correct: false, chancesLeft: team.chancesLeft };
+    }
 
-    // Fallback local evaluation if backend temporarily unreachable
-    const team = teams.find((t) => t.id === teamId);
-    if (!team) return { success: false };
-
-    const guess = rawGuess.trim().toUpperCase();
+    const cleanGuess = rawGuess.trim().toUpperCase();
     const correctPassword = team.password.trim().toUpperCase();
 
-    if (guess === correctPassword) {
+    if (cleanGuess === correctPassword) {
+      // SOLVED!
       const now = Date.now();
-      const elapsedSeconds = team.startTime ? Math.max(1, Math.round((now - team.startTime) / 1000)) : 1;
-      const updated = teams.map((t) => {
+      const elapsedSeconds = team.startTime
+        ? Math.max(1, Math.round((now - team.startTime) / 1000))
+        : 1;
+
+      const updated = currentTeams.map((t) => {
         if (t.id === teamId) {
-          return { ...t, solved: true, status: "SOLVED", timeTaken: elapsedSeconds, chancesUsed: t.chancesUsed + 1 };
+          return {
+            ...t,
+            solved: true,
+            status: "SOLVED",
+            timeTaken: elapsedSeconds,
+            chancesUsed: t.chancesUsed + 1,
+          };
         }
         return t;
       });
+
+      // Update state immediately so UI changes instantly
       setTeams(updated);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return { correct: true, timeTaken: elapsedSeconds };
+      // Broadcast to all other laptops via cloud sync
+      pushStateToCloud(updated);
+
+      // Also notify local Express server if running
+      try {
+        fetch("/api/submit-guess", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ teamId, guess: rawGuess }),
+        });
+      } catch (e) {}
+
+      return {
+        success: true,
+        correct: true,
+        timeTaken: elapsedSeconds,
+        chancesLeft: team.chancesLeft,
+      };
     } else {
+      // INCORRECT
       const newChances = Math.max(0, team.chancesLeft - 1);
-      const updated = teams.map((t) => {
+      const updated = currentTeams.map((t) => {
         if (t.id === teamId) {
-          return { ...t, chancesLeft: newChances, chancesUsed: t.chancesUsed + 1 };
+          return {
+            ...t,
+            chancesLeft: newChances,
+            chancesUsed: t.chancesUsed + 1,
+          };
         }
         return t;
       });
+
       setTeams(updated);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return { correct: false, chancesLeft: newChances };
+      pushStateToCloud(updated);
+
+      try {
+        fetch("/api/submit-guess", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ teamId, guess: rawGuess }),
+        });
+      } catch (e) {}
+
+      return {
+        success: true,
+        correct: false,
+        chancesLeft: newChances,
+      };
     }
   };
 
-  // ADMIN ACTIONS (Central Server Backed)
+  // ADMIN ACTIONS
   const updateTeamQuestion = async (teamId, { hint, password, letters }) => {
+    const upperPassword = password.trim().toUpperCase();
+    const lettersArr = Array.isArray(letters)
+      ? letters
+      : (letters || upperPassword).replace(/[^A-Za-z]/g, "").toUpperCase().split("");
+
+    const updated = teamsRef.current.map((t) => {
+      if (t.id === teamId) {
+        return {
+          ...t,
+          hint: hint.trim(),
+          password: upperPassword,
+          letters: lettersArr.length === 4 ? lettersArr : upperPassword.split(""),
+        };
+      }
+      return t;
+    });
+
+    setTeams(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    pushStateToCloud(updated);
+
     try {
-      await fetch("/api/admin/update-question", {
+      fetch("/api/admin/update-question", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ teamId, hint, password, letters }),
       });
-      fetchLatestTeamsFromServer();
     } catch (e) {}
   };
 
   const addNewTeam = async ({ id, name, passcode, letters, password, hint }) => {
+    const cleanId = id.trim().toUpperCase();
+    if (teamsRef.current.some((t) => t.id.toUpperCase() === cleanId)) {
+      return { success: false, message: "Team ID already exists!" };
+    }
+
+    const cleanPass = password.trim().toUpperCase();
+    const lettersArr = Array.isArray(letters)
+      ? letters
+      : (letters || cleanPass).replace(/[^A-Za-z]/g, "").toUpperCase().split("");
+
+    const newTeamObj = {
+      id: cleanId,
+      name: name?.trim() || `Team ${cleanId}`,
+      passcode: passcode?.trim() || "pass123",
+      letters: lettersArr.length === 4 ? lettersArr : cleanPass.split(""),
+      password: cleanPass,
+      hint: hint.trim(),
+      chancesLeft: 2,
+      chancesUsed: 0,
+      solved: false,
+      timeTaken: null,
+      startTime: null,
+      status: "PENDING",
+      disqualifiedReason: null,
+    };
+
+    const updated = [...teamsRef.current, newTeamObj];
+    setTeams(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    pushStateToCloud(updated);
+
     try {
-      const res = await fetch("/api/admin/add-team", {
+      fetch("/api/admin/add-team", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, name, passcode, letters, password, hint }),
       });
-      const data = await res.json();
-      if (data.success) {
-        fetchLatestTeamsFromServer();
-        return { success: true };
-      }
-      return { success: false, message: data.message };
-    } catch (e) {
-      return { success: false, message: "Server error" };
-    }
+    } catch (e) {}
+
+    return { success: true };
   };
 
   const resetTeamStatus = async (teamId) => {
+    const updated = teamsRef.current.map((t) => {
+      if (t.id === teamId) {
+        return {
+          ...t,
+          status: "PENDING",
+          disqualifiedReason: null,
+          chancesLeft: 2,
+          chancesUsed: 0,
+          solved: false,
+          timeTaken: null,
+          startTime: null,
+        };
+      }
+      return t;
+    });
+
+    setTeams(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    pushStateToCloud(updated);
+
     try {
-      await fetch("/api/admin/reset-team", {
+      fetch("/api/admin/reset-team", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ teamId }),
       });
-      fetchLatestTeamsFromServer();
     } catch (e) {}
   };
 
   const resetAllTeams = async () => {
+    const clean = JSON.parse(JSON.stringify(INITIAL_TEAMS));
+    setTeams(clean);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
+    pushStateToCloud(clean);
+
     try {
-      await fetch("/api/admin/reset-all", { method: "POST" });
-      fetchLatestTeamsFromServer();
+      fetch("/api/admin/reset-all", { method: "POST" });
     } catch (e) {}
   };
 
   const updateEventDuration = async (seconds) => {
     setEventDuration(seconds);
+    pushStateToCloud(teamsRef.current, seconds);
+
     try {
-      await fetch("/api/admin/duration", {
+      fetch("/api/admin/duration", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ duration: seconds }),
@@ -299,9 +457,33 @@ export function EventProvider({ children }) {
   };
 
   const simulateTeamActivity = async () => {
+    const eligible = teamsRef.current.filter((t) => !t.solved && t.status !== "DISQUALIFIED");
+    if (eligible.length === 0) return;
+
+    const randomTeam = eligible[Math.floor(Math.random() * eligible.length)];
+    const randomChancesUsed = Math.random() > 0.35 ? 1 : 2;
+    const randomTime = Math.floor(Math.random() * (eventDuration - 40)) + 35;
+
+    const updated = teamsRef.current.map((t) => {
+      if (t.id === randomTeam.id) {
+        return {
+          ...t,
+          solved: true,
+          status: "SOLVED",
+          timeTaken: randomTime,
+          chancesUsed: randomChancesUsed,
+          chancesLeft: 2 - randomChancesUsed,
+        };
+      }
+      return t;
+    });
+
+    setTeams(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    pushStateToCloud(updated);
+
     try {
-      await fetch("/api/admin/simulate", { method: "POST" });
-      fetchLatestTeamsFromServer();
+      fetch("/api/admin/simulate", { method: "POST" });
     } catch (e) {}
   };
 

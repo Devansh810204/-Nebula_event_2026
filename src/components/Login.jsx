@@ -9,7 +9,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [isDisqualifiedError, setIsDisqualifiedError] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setIsDisqualifiedError(false);
@@ -23,7 +23,7 @@ export default function Login() {
       return;
     }
 
-    const res = login(teamId, passcode);
+    const res = await login(teamId, passcode);
     if (!res.success) {
       setError(res.error);
       if (res.isDisqualified) {

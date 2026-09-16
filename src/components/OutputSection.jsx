@@ -63,7 +63,7 @@ export default function OutputSection({ onSwitchToLeaderboard }) {
 
       // Start timing immediately as user enters Output section
       if (currentTeam) {
-        startTeamTimer(currentTeam.id);
+        await startTeamTimer(currentTeam.id);
       }
     } catch (err) {
       console.warn("Fullscreen request error or fallback:", err);
@@ -71,7 +71,7 @@ export default function OutputSection({ onSwitchToLeaderboard }) {
       setInFullScreen(true);
       setHasEnteredArena(true);
       if (currentTeam) {
-        startTeamTimer(currentTeam.id);
+        await startTeamTimer(currentTeam.id);
       }
     }
   };
@@ -180,7 +180,7 @@ export default function OutputSection({ onSwitchToLeaderboard }) {
   }, []);
 
   // Handle Guess Submission
-  const handleGuessSubmit = (e) => {
+  const handleGuessSubmit = async (e) => {
     e.preventDefault();
     if (!inputVal.trim() || !currentTeam) return;
 
@@ -188,8 +188,8 @@ export default function OutputSection({ onSwitchToLeaderboard }) {
       return;
     }
 
-    const res = submitGuess(currentTeam.id, inputVal);
-    if (res.correct) {
+    const res = await submitGuess(currentTeam.id, inputVal);
+    if (res && res.correct) {
       setFeedbackMessage("🎉 Password Matched! Congratulations!");
       confetti({
         particleCount: 150,
@@ -199,7 +199,8 @@ export default function OutputSection({ onSwitchToLeaderboard }) {
     } else {
       setInputVal("");
       // Per user instruction: No status (like failed) is shown, only chances left is shown!
-      setFeedbackMessage(`Incorrect guess! Chances Left: ${res.chancesLeft}`);
+      const left = res?.chancesLeft !== undefined ? res.chancesLeft : Math.max(0, currentTeam.chancesLeft - 1);
+      setFeedbackMessage(`Incorrect guess! Chances Left: ${left}`);
     }
   };
 
