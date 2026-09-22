@@ -57,8 +57,8 @@ export default function AdminPanel() {
     e.preventDefault();
     if (!editingTeam) return;
 
-    if (editPassword.trim().length !== 4) {
-      alert("Password must be exactly 4 letters!");
+    if (editPassword.trim().length !== 8) {
+      alert("Password must be exactly 8 letters!");
       return;
     }
 
@@ -81,8 +81,8 @@ export default function AdminPanel() {
       return;
     }
 
-    if (newPassword.trim().length !== 4) {
-      setFormMsg("Password must be exactly 4 letters.");
+    if (newPassword.trim().length !== 8) {
+      setFormMsg("Password must be exactly 8 letters.");
       return;
     }
 
@@ -197,7 +197,7 @@ export default function AdminPanel() {
               <span>Add New Team Question & Password</span>
             </h3>
             <p className="card-subtext">
-              Configure the 4 alphabet letters, the hint, and the target secret password for a team.
+              Configure the 8 alphabet letters, the hint, and the target secret password for a team.
             </p>
 
             {formMsg && <div className="form-alert">{formMsg}</div>}
@@ -235,22 +235,22 @@ export default function AdminPanel() {
               </div>
 
               <div className="admin-form-group">
-                <label>4 Letters (Scrambled)</label>
+                <label>8 Letters (Scrambled)</label>
                 <input
                   type="text"
-                  maxLength={4}
-                  placeholder="e.g. E B D N"
+                  maxLength={8}
+                  placeholder="e.g. W O R D P A S S"
                   value={newLetters}
                   onChange={(e) => setNewLetters(e.target.value.toUpperCase())}
                 />
               </div>
 
               <div className="admin-form-group">
-                <label>Correct Password (4 Letters)</label>
+                <label>Correct Password (8 Letters)</label>
                 <input
                   type="text"
-                  maxLength={4}
-                  placeholder="e.g. BEND"
+                  maxLength={8}
+                  placeholder="e.g. PASSWORD"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value.toUpperCase())}
                   required
@@ -261,7 +261,7 @@ export default function AdminPanel() {
                 <label>Question Hint for this Team</label>
                 <input
                   type="text"
-                  placeholder="e.g. To curve or flex under force; anagram of a 4-letter word"
+                  placeholder="e.g. A secret authentication string used to access systems"
                   value={newHint}
                   onChange={(e) => setNewHint(e.target.value)}
                   required
@@ -282,7 +282,7 @@ export default function AdminPanel() {
             <div className="card-top-bar">
               <div>
                 <h3>All Team Questions & Passwords ({teams.length} Teams)</h3>
-                <p>Click "Edit" on any team to modify their Hint, 4 Letters, or Password.</p>
+                <p>Click "Edit" on any team to modify their Hint, 8 Letters, or Password.</p>
               </div>
 
               <div className="admin-search-box">
@@ -303,7 +303,7 @@ export default function AdminPanel() {
                     <th>Team ID</th>
                     <th>Team Name</th>
                     <th>Passcode</th>
-                    <th>4 Letters</th>
+                    <th>8 Letters</th>
                     <th>Correct Password</th>
                     <th>Assigned Hint</th>
                     <th>Actions</th>
@@ -565,10 +565,10 @@ export default function AdminPanel() {
 
             <form onSubmit={handleSaveEdit} className="modal-form">
               <div className="admin-form-group">
-                <label>4 Letters (Shown to Team)</label>
+                <label>8 Letters (Shown to Team)</label>
                 <input
                   type="text"
-                  maxLength={4}
+                  maxLength={8}
                   value={editLetters}
                   onChange={(e) => setEditLetters(e.target.value.toUpperCase())}
                   required
@@ -576,10 +576,10 @@ export default function AdminPanel() {
               </div>
 
               <div className="admin-form-group">
-                <label>Correct Password (4 Letters)</label>
+                <label>Correct Password (8 Letters)</label>
                 <input
                   type="text"
-                  maxLength={4}
+                  maxLength={8}
                   value={editPassword}
                   onChange={(e) => setEditPassword(e.target.value.toUpperCase())}
                   required

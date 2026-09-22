@@ -11,7 +11,10 @@ import {
   Trophy,
   CheckCircle2,
   RefreshCw,
-  Info
+  Info,
+  Delete,
+  RotateCcw,
+  Plus
 } from "lucide-react";
 
 export default function OutputSection({ onSwitchToLeaderboard }) {
@@ -182,7 +185,8 @@ export default function OutputSection({ onSwitchToLeaderboard }) {
   // Handle Guess Submission
   const handleGuessSubmit = async (e) => {
     e.preventDefault();
-    if (!inputVal.trim() || !currentTeam) return;
+    const targetLength = currentTeam?.letters?.length || 8;
+    if (inputVal.trim().length !== targetLength) return;
 
     if (currentTeam.chancesLeft <= 0 || isTimeUp || currentTeam.solved) {
       return;
@@ -261,7 +265,7 @@ export default function OutputSection({ onSwitchToLeaderboard }) {
                 <strong>Tab Change Detection:</strong> Switching tabs or opening applications will immediately mark your team as <em>"Disabled for changing tab"</em>.
               </li>
               <li>
-                <strong>2 Chances Limit:</strong> You have only 2 attempts to arrange and enter the correct 4-letter password.
+                <strong>2 Chances Limit:</strong> You have only 2 attempts to arrange and enter the correct 8-letter password.
               </li>
               <li>
                 <strong>Live Timer:</strong> Your timer starts the second you enter below.
@@ -284,6 +288,25 @@ export default function OutputSection({ onSwitchToLeaderboard }) {
     isTimeUp ||
     currentTeam?.solved ||
     currentTeam?.status === "DISQUALIFIED";
+
+  const targetLength = currentTeam?.letters?.length || 8;
+
+  const handleAddLetter = (letter) => {
+    if (isTypingDisabled || currentTeam?.solved || isTimeUp) return;
+    if (inputVal.length < targetLength) {
+      setInputVal((prev) => (prev + letter).toUpperCase());
+    }
+  };
+
+  const handleBackspace = () => {
+    if (isTypingDisabled || currentTeam?.solved || isTimeUp) return;
+    setInputVal((prev) => prev.slice(0, -1));
+  };
+
+  const handleClear = () => {
+    if (isTypingDisabled || currentTeam?.solved || isTimeUp) return;
+    setInputVal("");
+  };
 
   // Sorted leaderboard for quick docked view in Output section
   const sortedTeams = [...teams].sort((a, b) => {
@@ -351,18 +374,40 @@ export default function OutputSection({ onSwitchToLeaderboard }) {
             <span className="team-code-tag">ID: {currentTeam?.id}</span>
           </div>
 
-          {/* 4 Alphabet Letters Display */}
+          {/* 8 Alphabet Letters Display with Interactive Click-to-Add Feature */}
           <div className="letters-container">
-            <div className="letters-title">YOUR 4 ASSIGNED LETTERS:</div>
+            <div className="letters-header-row">
+              <div className="letters-title">YOUR ASSIGNED LETTERS ({targetLength} LETTERS):</div>
+              <span className="letters-interactive-hint">
+                <Plus size={13} /> Click any tile to add letter
+              </span>
+            </div>
             <div className="letter-tiles">
-              {currentTeam?.letters?.map((letter, idx) => (
-                <div key={idx} className="letter-tile">
-                  {letter}
-                </div>
-              ))}
+              {currentTeam?.letters?.map((letter, idx) => {
+                const isFull = inputVal.length >= targetLength;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={`letter-tile clickable ${isTypingDisabled ? "disabled" : ""} ${isFull ? "limit-reached" : ""}`}
+                    onClick={() => handleAddLetter(letter)}
+                    disabled={isTypingDisabled || isFull}
+                    title={
+                      isTypingDisabled
+                        ? "Input disabled"
+                        : isFull
+                        ? `Maximum ${targetLength} letters reached`
+                        : `Click to add '${letter}'`
+                    }
+                  >
+                    <span className="tile-letter">{letter}</span>
+                    <span className="tile-add-icon" aria-hidden="true">+</span>
+                  </button>
+                );
+              })}
             </div>
             <div className="letters-subtext">
-              Arrange these 4 letters to form the correct secret password.
+              Click letters above or use your keyboard to arrange the {targetLength}-letter secret password.
             </div>
           </div>
 
@@ -415,7 +460,7 @@ export default function OutputSection({ onSwitchToLeaderboard }) {
                 </div>
                 <input
                   type="text"
-                  maxLength={4}
+                  maxLength={targetLength}
                   placeholder={
                     isTypingDisabled
                       ? currentTeam?.chancesLeft === 0
@@ -423,7 +468,7 @@ export default function OutputSection({ onSwitchToLeaderboard }) {
                         : isTimeUp
                         ? "Time Expired"
                         : "Input disabled"
-                      : "Type 4-letter password"
+                      : `Type or click ${targetLength}-letter password`
                   }
                   value={inputVal}
                   onChange={(e) => setInputVal(e.target.value.toUpperCase())}
@@ -433,13 +478,47 @@ export default function OutputSection({ onSwitchToLeaderboard }) {
                 />
                 <button
                   type="submit"
-                  disabled={isTypingDisabled || inputVal.trim().length !== 4}
+                  disabled={isTypingDisabled || inputVal.trim().length !== targetLength}
                   className="submit-guess-btn"
                 >
                   <span>Submit</span>
                   <Send size={18} />
                 </button>
               </div>
+
+              {/* Interactive Add Letters Control Row (Backspace, Clear All, Counter) */}
+              {!isTypingDisabled && (
+                <div className="input-util-actions">
+                  <div className="util-btn-group">
+                    <button
+                      type="button"
+                      className="util-action-btn backspace-btn"
+                      onClick={handleBackspace}
+                      disabled={inputVal.length === 0}
+                      title="Backspace: delete last letter"
+                    >
+                      <Delete size={15} />
+                      <span>Backspace</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="util-action-btn clear-btn"
+                      onClick={handleClear}
+                      disabled={inputVal.length === 0}
+                      title="Clear: remove all entered letters"
+                    >
+                      <RotateCcw size={15} />
+                      <span>Clear All</span>
+                    </button>
+                  </div>
+
+                  <div className="char-count-pill">
+                    <span className="count-number">{inputVal.length}</span>
+                    <span className="count-divider">/</span>
+                    <span className="count-total">{targetLength} letters</span>
+                  </div>
+                </div>
+              )}
 
               {/* Note: In accordance with user feedback: No status like FAILED is displayed when chances = 0. Only chances left is shown */}
               {currentTeam?.chancesLeft === 0 && (

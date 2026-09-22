@@ -24,10 +24,20 @@ function loadData() {
     if (fs.existsSync(DATA_FILE)) {
       const raw = fs.readFileSync(DATA_FILE, "utf-8");
       const parsed = JSON.parse(raw);
-      teams = parsed.teams || INITIAL_TEAMS;
-      eventDuration = parsed.eventDuration || 300;
-      console.log(`Loaded ${teams.length} teams from persistent storage.`);
-      return;
+      if (Array.isArray(parsed.teams) && parsed.teams.length > 0) {
+        // If stored data was from old 4-letter format, migrate to INITIAL_TEAMS (8-letter)
+        if (parsed.teams[0].password && parsed.teams[0].password.length !== 8) {
+          console.log("Migrating teams store from legacy format to 8-letter INITIAL_TEAMS...");
+          teams = JSON.parse(JSON.stringify(INITIAL_TEAMS));
+          eventDuration = parsed.eventDuration || 300;
+          saveData();
+          return;
+        }
+        teams = parsed.teams;
+        eventDuration = parsed.eventDuration || 300;
+        console.log(`Loaded ${teams.length} teams from persistent storage.`);
+        return;
+      }
     }
   } catch (err) {
     console.error("Error loading data from file, falling back to defaults:", err);

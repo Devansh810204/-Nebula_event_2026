@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { INITIAL_TEAMS } from "../data/defaultTeams";
 
-const STORAGE_KEY = "nebula_2026_event_teams";
-const CURRENT_USER_KEY = "nebula_2026_current_user";
-const CLOUD_SYNC_URL = "https://kvdb.io/FMATtTgS58UHyrfr2r84pR/nebula_2026_state";
+const STORAGE_KEY = "nebula_2026_event_teams_v8";
+const CURRENT_USER_KEY = "nebula_2026_current_user_v8";
+const CLOUD_SYNC_URL = "https://kvdb.io/FMATtTgS58UHyrfr2r84pR/nebula_2026_state_v8";
 
 const EventContext = createContext();
 
@@ -12,7 +12,12 @@ export function EventProvider({ children }) {
   const [teams, setTeams] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].letters && parsed[0].letters.length === 8) {
+          return parsed;
+        }
+      }
     } catch (e) {}
     return INITIAL_TEAMS;
   });

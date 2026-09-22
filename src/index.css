@@ -1,23 +1,26 @@
 :root {
-  --bg-dark: #090d16;
-  --bg-card: rgba(16, 24, 40, 0.75);
-  --bg-card-solid: #0f172a;
-  --bg-card-hover: rgba(26, 38, 62, 0.85);
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-glow: rgba(0, 242, 254, 0.3);
+  --bg-dark: #f8fafc;
+  --bg-canvas: #f1f5f9;
+  --bg-card: rgba(255, 255, 255, 0.96);
+  --bg-card-solid: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --border-color: #e2e8f0;
+  --border-subtle: #edf2f7;
+  --border-glow: rgba(37, 99, 235, 0.25);
   
-  --neon-cyan: #00f2fe;
-  --neon-blue: #4facfe;
-  --neon-purple: #9d4edd;
-  --neon-green: #10b981;
-  --neon-red: #ef4444;
-  --gold: #f59e0b;
-  --silver: #94a3b8;
+  --neon-cyan: #0284c7;
+  --neon-blue: #2563eb;
+  --neon-purple: #7c3aed;
+  --neon-green: #059669;
+  --neon-red: #dc2626;
+  --gold: #d97706;
+  --silver: #64748b;
   --bronze: #b45309;
 
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
+  --text-main: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
 
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-heading: 'Space Grotesk', var(--font-sans);
@@ -26,7 +29,13 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-xl: 20px;
+
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 2px 4px 0 rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 24px -4px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+  --shadow-xl: 0 20px 32px -6px rgba(15, 23, 42, 0.1), 0 8px 16px -4px rgba(15, 23, 42, 0.05);
 }
 
 * {
@@ -37,15 +46,15 @@
 
 body {
   font-family: var(--font-sans);
-  background-color: var(--bg-dark);
+  background-color: #f8fafc;
   color: var(--text-main);
   line-height: 1.5;
   min-height: 100vh;
   overflow-x: hidden;
   background-image: 
-    radial-gradient(circle at 15% 15%, rgba(79, 172, 254, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 85% 85%, rgba(157, 78, 221, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 50% 50%, rgba(0, 242, 254, 0.03) 0%, transparent 60%);
+    radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.05) 0%, transparent 45%),
+    radial-gradient(circle at 90% 90%, rgba(124, 58, 237, 0.05) 0%, transparent 45%),
+    radial-gradient(circle at 50% 25%, rgba(14, 165, 233, 0.04) 0%, transparent 55%);
   background-attachment: fixed;
 }
 
@@ -55,14 +64,14 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(10, 15, 26, 0.7);
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: #cbd5e1;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--neon-cyan);
+  background: #94a3b8;
 }
 
 button {
