@@ -8,6 +8,77 @@
   flex-direction: column;
   min-height: 100vh;
   background-color: #f8fafc;
+  position: relative;
+}
+
+/* Watermarks */
+.site-watermark-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+.site-watermark-img {
+  width: min(560px, 75vw);
+  height: auto;
+  opacity: 0.042;
+  filter: contrast(110%);
+  user-select: none;
+  animation: watermarkFloat 24s ease-in-out infinite alternate;
+}
+
+@keyframes watermarkFloat {
+  0% { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.04) translateY(-10px); }
+}
+
+.team-watermark-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+.team-watermark-track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-12deg);
+  opacity: 0.04;
+  text-align: center;
+  padding: 20px;
+}
+
+.team-watermark-name {
+  font-family: var(--font-heading);
+  font-size: clamp(2.5rem, 6.5vw, 6.5rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #1e3a8a;
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1.1;
+}
+
+.team-watermark-id {
+  font-family: var(--font-mono);
+  font-size: clamp(1.4rem, 3.5vw, 3rem);
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: #2563eb;
+  margin-top: 8px;
 }
 
 .main-content {
@@ -16,6 +87,8 @@
   width: 100%;
   margin: 0 auto;
   padding: 24px 20px 48px;
+  position: relative;
+  z-index: 1;
 }
 
 /* ==========================================================================
@@ -50,16 +123,25 @@
   user-select: none;
 }
 
-.brand-badge {
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
-  border: 1px solid #bfdbfe;
-  padding: 8px;
+.brand-badge,
+.brand-badge-logo {
+  width: 40px;
+  height: 40px;
+  background: #ffffff;
+  border: 1.5px solid #bfdbfe;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #2563eb;
-  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.08);
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.1);
+  flex-shrink: 0;
+}
+
+.navbar-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .brand-title {
@@ -257,13 +339,46 @@
 }
 
 .login-card {
+  position: relative;
   background: #ffffff;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
-  padding: 40px 36px;
+  padding: 32px 36px 40px;
   width: 100%;
   max-width: 480px;
   box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+}
+
+.login-top-corner-brand {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.login-corner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 4px 12px;
+  border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
+}
+
+.login-corner-logo-img {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.login-corner-title {
+  font-family: var(--font-heading);
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  letter-spacing: 0.03em;
 }
 
 .login-header {
@@ -271,18 +386,26 @@
   margin-bottom: 28px;
 }
 
-.cyber-icon-ring {
-  width: 64px;
-  height: 64px;
+.cyber-icon-ring,
+.cyber-logo-ring {
+  width: 68px;
+  height: 68px;
   margin: 0 auto 16px;
   border-radius: 50%;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: #ffffff;
+  border: 2px solid #bfdbfe;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.14);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #2563eb;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+  overflow: hidden;
+  padding: 6px;
+}
+
+.login-header-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .login-header h2 {
@@ -2058,6 +2181,23 @@
   border-radius: 4px;
 }
 
+.pass-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.len-pill {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
 .hint-cell {
   max-width: 280px;
   white-space: nowrap;
@@ -2067,8 +2207,14 @@
   font-style: italic;
 }
 
-.edit-btn {
+.table-actions-row {
   display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-btn {
+  display: inline-flex;
   align-items: center;
   gap: 4px;
   background: #ffffff;
@@ -2085,6 +2231,28 @@
   background: #eff6ff;
   border-color: #2563eb;
   color: #2563eb;
+}
+
+.delete-team-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.delete-team-btn:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+  color: #b91c1c;
+  transform: translateY(-1px);
 }
 
 /* Monitor Stats */
@@ -2278,6 +2446,56 @@
   font-size: 1.25rem;
   font-weight: 800;
   color: var(--text-main);
+}
+
+.modal-team-id-badge {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+.modal-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 600px) {
+  .modal-two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.label-with-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.length-indicator-pill {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.field-hint-sub {
+  font-size: 0.74rem;
+  color: #64748b;
+  margin-top: 4px;
+  display: block;
 }
 
 .close-btn {

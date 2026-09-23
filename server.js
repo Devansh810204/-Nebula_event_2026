@@ -263,29 +263,65 @@ app.post("/api/disqualify", (req, res) => {
 
 // ADMIN ROUTES
 
-// 6. Update Team Question & Password
-app.post("/api/admin/update-question", (req, res) => {
-  const { teamId, hint, password, letters } = req.body;
+// 6. Update Team Details, Question & Password
+const handleUpdateTeam = (req, res) => {
+  const { teamId, name, passcode, hint, password, letters } = req.body;
   const team = teams.find((t) => t.id === teamId);
 
   if (!team) {
     return res.status(404).json({ success: false, message: "Team not found" });
   }
 
-  const upperPassword = password.trim().toUpperCase();
-  const lettersArr = Array.isArray(letters)
-    ? letters
-    : (letters || upperPassword).replace(/[^A-Za-z]/g, "").toUpperCase().split("");
+  if (name && name.trim()) {
+    team.name = name.trim();
+  }
 
-  team.hint = hint.trim();
-  team.password = upperPassword;
-  team.letters = lettersArr.length === 4 ? lettersArr : upperPassword.split("");
+  if (passcode && passcode.trim()) {
+    team.passcode = passcode.trim();
+  }
+
+  if (hint !== undefined) {
+    team.hint = hint.trim();
+  }
+
+  if (password) {
+    const upperPassword = password.trim().toUpperCase();
+    team.password = upperPassword;
+
+    let lettersArr = [];
+    if (Array.isArray(letters)) {
+      lettersArr = letters;
+    } else if (typeof letters === "string" && letters.trim()) {
+      lettersArr = letters.replace(/[^A-Za-z]/g, "").toUpperCase().split("");
+    }
+
+    team.letters = lettersArr.length > 0 ? lettersArr : upperPassword.split("");
+  }
+
+  saveData();
+  res.json({ success: true, team });
+};
+
+app.post("/api/admin/update-team", handleUpdateTeam);
+app.post("/api/admin/update-question", handleUpdateTeam);
+
+// 7. Delete Team
+app.post("/api/admin/delete-team", (req, res) => {
+  const { teamId } = req.body;
+  const index = teams.findIndex((t) => t.id === teamId);
+
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: "Team not found" });
+  }
+
+  const [deletedTeam] = teams.splice(index, 1);
   saveData();
 
-  res.json({ success: true, team });
+  console.log(`[ADMIN] Team deleted: ${deletedTeam.id} (${deletedTeam.name})`);
+  res.json({ success: true, deletedTeam, teams });
 });
 
-// 7. Add New Team
+// 8. Add New Team
 app.post("/api/admin/add-team", (req, res) => {
   const { id, name, passcode, letters, password, hint } = req.body;
   const cleanId = id.trim().toUpperCase();
@@ -303,9 +339,9 @@ app.post("/api/admin/add-team", (req, res) => {
     id: cleanId,
     name: name?.trim() || `Team ${cleanId}`,
     passcode: passcode?.trim() || "pass123",
-    letters: lettersArr.length === 4 ? lettersArr : cleanPass.split(""),
+    letters: lettersArr.length > 0 ? lettersArr : cleanPass.split(""),
     password: cleanPass,
-    hint: hint.trim(),
+    hint: hint?.trim() || "",
     chancesLeft: 2,
     chancesUsed: 0,
     solved: false,

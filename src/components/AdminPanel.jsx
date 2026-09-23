@@ -4,6 +4,7 @@ import {
   ShieldCheck,
   PlusCircle,
   Edit3,
+  Trash2,
   RotateCcw,
   Sparkles,
   Download,
@@ -19,6 +20,7 @@ export default function AdminPanel() {
   const {
     teams,
     updateTeamQuestion,
+    deleteTeam,
     addNewTeam,
     resetTeamStatus,
     resetAllTeams,
@@ -41,6 +43,8 @@ export default function AdminPanel() {
   const [formMsg, setFormMsg] = useState("");
 
   // Edit Team Form State
+  const [editName, setEditName] = useState("");
+  const [editPasscode, setEditPasscode] = useState("");
   const [editLetters, setEditLetters] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [editHint, setEditHint] = useState("");
@@ -48,7 +52,9 @@ export default function AdminPanel() {
   // Open Edit Modal
   const startEditing = (team) => {
     setEditingTeam(team);
-    setEditLetters(team.letters.join(""));
+    setEditName(team.name);
+    setEditPasscode(team.passcode);
+    setEditLetters(team.letters ? team.letters.join("") : "");
     setEditPassword(team.password);
     setEditHint(team.hint);
   };
@@ -57,18 +63,27 @@ export default function AdminPanel() {
     e.preventDefault();
     if (!editingTeam) return;
 
-    if (editPassword.trim().length !== 8) {
-      alert("Password must be exactly 8 letters!");
+    if (editPassword.trim().length < 3) {
+      alert("Password must be at least 3 characters!");
       return;
     }
 
     await updateTeamQuestion(editingTeam.id, {
+      name: editName,
+      passcode: editPasscode,
       hint: editHint,
       password: editPassword,
       letters: editLetters,
     });
 
     setEditingTeam(null);
+  };
+
+  // Delete Team Handler
+  const handleDeleteTeam = async (teamId, teamName) => {
+    if (window.confirm(`Are you sure you want to permanently delete ${teamName} (${teamId})?\n\nThis will remove them from the leaderboard, live monitor, and competition database.`)) {
+      await deleteTeam(teamId);
+    }
   };
 
   // Add New Team Handler
@@ -81,8 +96,8 @@ export default function AdminPanel() {
       return;
     }
 
-    if (newPassword.trim().length !== 8) {
-      setFormMsg("Password must be exactly 8 letters.");
+    if (newPassword.trim().length < 3) {
+      setFormMsg("Password must be at least 3 characters.");
       return;
     }
 
@@ -235,22 +250,20 @@ export default function AdminPanel() {
               </div>
 
               <div className="admin-form-group">
-                <label>8 Letters (Scrambled)</label>
+                <label>Letters (Scrambled)</label>
                 <input
                   type="text"
-                  maxLength={8}
-                  placeholder="e.g. W O R D P A S S"
+                  placeholder="e.g. W O R D P A S S (or leave empty to auto-scramble)"
                   value={newLetters}
                   onChange={(e) => setNewLetters(e.target.value.toUpperCase())}
                 />
               </div>
 
               <div className="admin-form-group">
-                <label>Correct Password (8 Letters)</label>
+                <label>Correct Password (Any Length)</label>
                 <input
                   type="text"
-                  maxLength={8}
-                  placeholder="e.g. PASSWORD"
+                  placeholder="e.g. PASSWORD (or any custom length)"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value.toUpperCase())}
                   required
@@ -271,7 +284,7 @@ export default function AdminPanel() {
               <div className="form-btn-row full-width">
                 <button type="submit" className="primary-admin-btn">
                   <PlusCircle size={18} />
-                  <span>Save Team Question & Password</span>
+                  <span>Save Team & Password</span>
                 </button>
               </div>
             </form>
@@ -282,7 +295,7 @@ export default function AdminPanel() {
             <div className="card-top-bar">
               <div>
                 <h3>All Team Questions & Passwords ({teams.length} Teams)</h3>
-                <p>Click "Edit" on any team to modify their Hint, 8 Letters, or Password.</p>
+                <p>Edit Team Name, Passcode, Custom Password Length, or Delete Teams.</p>
               </div>
 
               <div className="admin-search-box">
@@ -303,8 +316,8 @@ export default function AdminPanel() {
                     <th>Team ID</th>
                     <th>Team Name</th>
                     <th>Passcode</th>
-                    <th>8 Letters</th>
-                    <th>Correct Password</th>
+                    <th>Assigned Letters</th>
+                    <th>Target Password</th>
                     <th>Assigned Hint</th>
                     <th>Actions</th>
                   </tr>
@@ -329,19 +342,33 @@ export default function AdminPanel() {
                         </div>
                       </td>
                       <td>
-                        <span className="password-tag">{team.password}</span>
+                        <div className="pass-wrap">
+                          <span className="password-tag">{team.password}</span>
+                          <span className="len-pill">{team.password?.length || team.letters?.length}L</span>
+                        </div>
                       </td>
                       <td className="hint-cell" title={team.hint}>
                         "{team.hint}"
                       </td>
                       <td>
-                        <button
-                          className="edit-btn"
-                          onClick={() => startEditing(team)}
-                        >
-                          <Edit3 size={14} />
-                          <span>Edit</span>
-                        </button>
+                        <div className="table-actions-row">
+                          <button
+                            className="edit-btn"
+                            onClick={() => startEditing(team)}
+                            title="Edit Name, Passcode, and Password"
+                          >
+                            <Edit3 size={14} />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            className="delete-team-btn"
+                            onClick={() => handleDeleteTeam(team.id, team.name)}
+                            title={`Delete ${team.name}`}
+                          >
+                            <Trash2 size={14} />
+                            <span>Delete</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -557,33 +584,74 @@ export default function AdminPanel() {
         <div className="modal-backdrop">
           <div className="modal-content">
             <div className="modal-header">
-              <h3>Edit Question: {editingTeam.name}</h3>
+              <div>
+                <h3>Edit Team & Challenge</h3>
+                <span className="modal-team-id-badge">{editingTeam.id}</span>
+              </div>
               <button className="close-btn" onClick={() => setEditingTeam(null)}>
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleSaveEdit} className="modal-form">
+              <div className="modal-two-col">
+                <div className="admin-form-group">
+                  <label>Team Name</label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="e.g. Team 01 - Alpha Bytes"
+                    required
+                  />
+                </div>
+
+                <div className="admin-form-group">
+                  <label>Login Passcode</label>
+                  <input
+                    type="text"
+                    value={editPasscode}
+                    onChange={(e) => setEditPasscode(e.target.value)}
+                    placeholder="e.g. team01"
+                    required
+                  />
+                </div>
+              </div>
+
               <div className="admin-form-group">
-                <label>8 Letters (Shown to Team)</label>
+                <div className="label-with-pill">
+                  <label>Correct Password (Target)</label>
+                  <span className="length-indicator-pill">{editPassword.trim().length} Letters</span>
+                </div>
                 <input
                   type="text"
-                  maxLength={8}
-                  value={editLetters}
-                  onChange={(e) => setEditLetters(e.target.value.toUpperCase())}
+                  value={editPassword}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    setEditPassword(val);
+                    // Automatically update scrambled tiles if they were mirroring or empty
+                    if (!editLetters || editLetters.length === editPassword.length) {
+                      setEditLetters(val.split("").reverse().join(""));
+                    }
+                  }}
+                  placeholder="Enter target word (any size e.g. 4 to 12 letters)"
                   required
                 />
               </div>
 
               <div className="admin-form-group">
-                <label>Correct Password (8 Letters)</label>
+                <div className="label-with-pill">
+                  <label>Letters Shown to Team (Scrambled)</label>
+                  <span className="length-indicator-pill">{editLetters.trim().length} Tiles</span>
+                </div>
                 <input
                   type="text"
-                  maxLength={8}
-                  value={editPassword}
-                  onChange={(e) => setEditPassword(e.target.value.toUpperCase())}
+                  value={editLetters}
+                  onChange={(e) => setEditLetters(e.target.value.toUpperCase())}
+                  placeholder="Enter scrambled letters for team to arrange"
                   required
                 />
+                <span className="field-hint-sub">These letters appear as interactive click-to-add tiles in the team's arena.</span>
               </div>
 
               <div className="admin-form-group">
@@ -592,6 +660,7 @@ export default function AdminPanel() {
                   rows={3}
                   value={editHint}
                   onChange={(e) => setEditHint(e.target.value)}
+                  placeholder="Technical definition or clue..."
                   required
                 />
               </div>

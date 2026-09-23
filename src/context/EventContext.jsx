@@ -342,19 +342,24 @@ export function EventProvider({ children }) {
   };
 
   // ADMIN ACTIONS
-  const updateTeamQuestion = async (teamId, { hint, password, letters }) => {
-    const upperPassword = password.trim().toUpperCase();
-    const lettersArr = Array.isArray(letters)
-      ? letters
-      : (letters || upperPassword).replace(/[^A-Za-z]/g, "").toUpperCase().split("");
+  const updateTeamQuestion = async (teamId, { name, passcode, hint, password, letters }) => {
+    const upperPassword = (password || "").trim().toUpperCase();
+    let lettersArr = [];
+    if (Array.isArray(letters)) {
+      lettersArr = letters;
+    } else if (typeof letters === "string" && letters.trim()) {
+      lettersArr = letters.replace(/[^A-Za-z]/g, "").toUpperCase().split("");
+    }
 
     const updated = teamsRef.current.map((t) => {
       if (t.id === teamId) {
         return {
           ...t,
-          hint: hint.trim(),
-          password: upperPassword,
-          letters: lettersArr.length === 4 ? lettersArr : upperPassword.split(""),
+          name: name?.trim() || t.name,
+          passcode: passcode?.trim() || t.passcode,
+          hint: hint !== undefined ? hint.trim() : t.hint,
+          password: upperPassword || t.password,
+          letters: lettersArr.length > 0 ? lettersArr : (upperPassword ? upperPassword.split("") : t.letters),
         };
       }
       return t;
@@ -365,12 +370,29 @@ export function EventProvider({ children }) {
     pushStateToCloud(updated);
 
     try {
-      fetch("/api/admin/update-question", {
+      fetch("/api/admin/update-team", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamId, hint, password, letters }),
+        body: JSON.stringify({ teamId, name, passcode, hint, password, letters }),
       });
     } catch (e) {}
+  };
+
+  const deleteTeam = async (teamId) => {
+    const updated = teamsRef.current.filter((t) => t.id !== teamId);
+    setTeams(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    pushStateToCloud(updated);
+
+    try {
+      fetch("/api/admin/delete-team", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId }),
+      });
+    } catch (e) {}
+
+    return { success: true };
   };
 
   const addNewTeam = async ({ id, name, passcode, letters, password, hint }) => {
@@ -380,17 +402,20 @@ export function EventProvider({ children }) {
     }
 
     const cleanPass = password.trim().toUpperCase();
-    const lettersArr = Array.isArray(letters)
-      ? letters
-      : (letters || cleanPass).replace(/[^A-Za-z]/g, "").toUpperCase().split("");
+    let lettersArr = [];
+    if (Array.isArray(letters)) {
+      lettersArr = letters;
+    } else if (typeof letters === "string" && letters.trim()) {
+      lettersArr = letters.replace(/[^A-Za-z]/g, "").toUpperCase().split("");
+    }
 
     const newTeamObj = {
       id: cleanId,
       name: name?.trim() || `Team ${cleanId}`,
       passcode: passcode?.trim() || "pass123",
-      letters: lettersArr.length === 4 ? lettersArr : cleanPass.split(""),
+      letters: lettersArr.length > 0 ? lettersArr : cleanPass.split(""),
       password: cleanPass,
-      hint: hint.trim(),
+      hint: hint?.trim() || "",
       chancesLeft: 2,
       chancesUsed: 0,
       solved: false,
@@ -517,6 +542,7 @@ export function EventProvider({ children }) {
         startTeamTimer,
         submitGuess,
         updateTeamQuestion,
+        deleteTeam,
         addNewTeam,
         resetTeamStatus,
         resetAllTeams,

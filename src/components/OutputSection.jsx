@@ -265,7 +265,7 @@ export default function OutputSection({ onSwitchToLeaderboard }) {
                 <strong>Tab Change Detection:</strong> Switching tabs or opening applications will immediately mark your team as <em>"Disabled for changing tab"</em>.
               </li>
               <li>
-                <strong>2 Chances Limit:</strong> You have only 2 attempts to arrange and enter the correct 8-letter password.
+                <strong>2 Chances Limit:</strong> You have only 2 attempts to arrange and enter the correct {currentTeam?.letters?.length || 8}-letter password.
               </li>
               <li>
                 <strong>Live Timer:</strong> Your timer starts the second you enter below.

@@ -10,7 +10,7 @@ import { useDeviceDetector } from "./utils/deviceCheck";
 import "./App.css";
 
 function AppContent() {
-  const { currentUser, activeTab, setActiveTab } = useEvent();
+  const { currentUser, currentTeam, activeTab, setActiveTab } = useEvent();
   const isMobile = useDeviceDetector();
 
   // If accessed from Android, mobile phone, or tablet:
@@ -18,48 +18,40 @@ function AppContent() {
     return <DeviceRestriction />;
   }
 
-  // If user is not logged in:
+  // Render appropriate view based on auth
+  let content = null;
   if (!currentUser) {
-    return (
-      <div className="app-layout">
-        <Navbar />
-        <main className="main-content">
-          {activeTab === "leaderboard" ? (
-            <Leaderboard />
-          ) : (
-            <Login />
-          )}
-        </main>
-      </div>
+    content = activeTab === "leaderboard" ? <Leaderboard /> : <Login />;
+  } else if (currentUser.type === "ADMIN") {
+    content = activeTab === "leaderboard" ? <Leaderboard /> : <AdminPanel />;
+  } else {
+    content = activeTab === "leaderboard" ? (
+      <Leaderboard />
+    ) : (
+      <OutputSection onSwitchToLeaderboard={() => setActiveTab("leaderboard")} />
     );
   }
 
-  // If user is Admin:
-  if (currentUser.type === "ADMIN") {
-    return (
-      <div className="app-layout">
-        <Navbar />
-        <main className="main-content">
-          {activeTab === "leaderboard" ? (
-            <Leaderboard />
-          ) : (
-            <AdminPanel />
-          )}
-        </main>
-      </div>
-    );
-  }
-
-  // If user is a Team:
   return (
     <div className="app-layout">
+      {/* 1. Global Website Nebula Logo Watermark in background */}
+      <div className="site-watermark-overlay" aria-hidden="true">
+        <img src="/nebula-logo.jpg" alt="" className="site-watermark-img" />
+      </div>
+
+      {/* 2. Team-Specific Name Watermark in background when team is logged in */}
+      {currentUser?.type === "TEAM" && currentTeam && (
+        <div className="team-watermark-overlay" aria-hidden="true">
+          <div className="team-watermark-track">
+            <span className="team-watermark-name">{currentTeam.name}</span>
+            <span className="team-watermark-id">{currentTeam.id}</span>
+          </div>
+        </div>
+      )}
+
       <Navbar />
       <main className="main-content">
-        {activeTab === "leaderboard" ? (
-          <Leaderboard />
-        ) : (
-          <OutputSection onSwitchToLeaderboard={() => setActiveTab("leaderboard")} />
-        )}
+        {content}
       </main>
     </div>
   );

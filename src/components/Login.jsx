@@ -35,9 +35,17 @@ export default function Login() {
   return (
     <div className="login-wrapper">
       <div className="login-card">
+        {/* Top Corner Branding requested by user */}
+        <div className="login-top-corner-brand">
+          <div className="login-corner-badge">
+            <img src="/nebula-logo.jpg" alt="Nebula Logo" className="login-corner-logo-img" />
+            <span className="login-corner-title">Nebula 2026</span>
+          </div>
+        </div>
+
         <div className="login-header">
-          <div className="cyber-icon-ring">
-            <Lock size={32} className="text-neon-cyan" />
+          <div className="cyber-logo-ring">
+            <img src="/nebula-logo.jpg" alt="Nebula Logo" className="login-header-logo-img" />
           </div>
           <h2>Participant Access Portal</h2>
           <p>College Technical Event • Password Decryption Challenge</p>

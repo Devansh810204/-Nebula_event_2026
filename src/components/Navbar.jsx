@@ -10,8 +10,8 @@ export default function Navbar() {
       <div className="nav-container">
         {/* Logo / Title */}
         <div className="brand" onClick={() => setActiveTab(currentUser?.type === "ADMIN" ? "admin" : "output")}>
-          <div className="brand-badge">
-            <Terminal size={20} className="text-neon-cyan" />
+          <div className="brand-badge-logo">
+            <img src="/nebula-logo.jpg" alt="Nebula Logo" className="navbar-logo-img" />
           </div>
           <div>
             <div className="brand-title">NEBULA 2026</div>
