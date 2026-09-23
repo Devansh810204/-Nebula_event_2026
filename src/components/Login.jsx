@@ -48,7 +48,6 @@ export default function Login() {
             <img src="/nebula-logo.jpg" alt="Nebula Logo" className="login-header-logo-img" />
           </div>
           <h2>Participant Access Portal</h2>
-          <p>College Technical Event • Password Decryption Challenge</p>
         </div>
 
         {error && (
